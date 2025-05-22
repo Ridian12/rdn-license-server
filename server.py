@@ -62,6 +62,21 @@ def login():
 
     return jsonify({"success": True})
 
+@app.route("/add_license", methods=["POST"])
+def add_license():
+    data = request.json
+    license_key = data.get("license")
+    if not license_key:
+        return jsonify({"error": "No license provided"}), 400
+
+    licenses = load_json(LICENSES_FILE)
+    if license_key in licenses:
+        return jsonify({"error": "License already exists"}), 400
+
+    licenses[license_key] = {"activated": False, "expiry_timestamp": 0}
+    save_json(LICENSES_FILE, licenses)
+    return jsonify({"success": True, "license": license_key}), 200
+
 @app.route("/")
 def index():
     return "RIDIAN LICENSE SERVER ONLINE", 200
