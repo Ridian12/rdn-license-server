@@ -2,4 +2,10 @@
   "TESTLICENSE123456": {
     "activated": false
   }
+},
+{
+  "NOUALICENTA123": {
+    "activated": false,
+    "expiry_timestamp": 0
+  }
 }
