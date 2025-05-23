@@ -84,5 +84,15 @@ def add_license():
 def index():
     return "RIDIAN LICENSE SERVER ONLINE", 200
 
+@app.route("/test_write", methods=["POST"])
+def test_write():
+    try:
+        with open("test_write.txt", "w") as f:
+            f.write("test scriere OK")
+        return "Scriere reușită", 200
+    except Exception as e:
+        return f"Eroare la scriere: {e}", 500
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
