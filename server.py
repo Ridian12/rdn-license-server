@@ -102,10 +102,7 @@ def login():
     })
 
 # ---------------------- INIT DB ----------------------
-@app.before_first_request
-def create_tables():
-    db.create_all()
-
+# ---------------------- MAIN ----------------------
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
