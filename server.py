@@ -82,7 +82,8 @@ def add_license():
 
 @app.route("/")
 def index():
-    return "RIDIAN LICENSE SERVER ONLINE", 200
+    cwd = os.getcwd()
+    return f"RIDIAN LICENSE SERVER ONLINE<br>Director curent: {cwd}", 200
 
 @app.route("/test_write", methods=["POST"])
 def test_write():
