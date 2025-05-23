@@ -3,12 +3,10 @@ import json, time, hashlib, os
 
 app = Flask(__name__)
 
-# Cale absolută către fișierele JSON
+# Setăm calea absolută către directorul în care se află server.py
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 USERS_FILE = os.path.join(BASE_DIR, "users.json")
 LICENSES_FILE = os.path.join(BASE_DIR, "licenses.json")
-
-print("Server pornit în directorul:", BASE_DIR)  # Debug
 
 def load_json(file):
     if not os.path.exists(file):
@@ -17,11 +15,8 @@ def load_json(file):
         return json.load(f)
 
 def save_json(file, data):
-    try:
-        with open(file, 'w') as f:
-            json.dump(data, f, indent=4)
-    except Exception as e:
-        print(f"Eroare la salvare în {file}: {e}")
+    with open(file, 'w') as f:
+        json.dump(data, f, indent=4)
 
 @app.route("/register", methods=["POST"])
 def register():
@@ -36,7 +31,7 @@ def register():
     if licenta not in licenses or licenses[licenta].get("activated"):
         return jsonify({"error": "Licență invalidă sau activată"}), 400
 
-    expiry = int(time.time()) + 7 * 24 * 60 * 60
+    expiry = int(time.time()) + 7 * 24 * 60 * 60  # 7 zile
     licenses[licenta] = {"activated": True, "expiry_timestamp": expiry}
     users[user] = {
         "password": hashlib.sha256(pwd.encode()).hexdigest(),
