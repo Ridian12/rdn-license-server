@@ -3,20 +3,35 @@ import json, time, hashlib, os
 
 app = Flask(__name__)
 
-# Setăm calea absolută către directorul în care se află server.py
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 USERS_FILE = os.path.join(BASE_DIR, "users.json")
 LICENSES_FILE = os.path.join(BASE_DIR, "licenses.json")
 
+def initialize_file(file_path, default_data):
+    if not os.path.exists(file_path):
+        print(f"[INIT] Creare fișier: {file_path}")
+        with open(file_path, 'w') as f:
+            json.dump(default_data, f, indent=4)
+
+# Inițializare la pornire
+initialize_file(USERS_FILE, {})
+initialize_file(LICENSES_FILE, {})
+
 def load_json(file):
-    if not os.path.exists(file):
+    try:
+        with open(file, 'r') as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"[EROARE] Citire JSON {file}: {e}")
         return {}
-    with open(file, 'r') as f:
-        return json.load(f)
 
 def save_json(file, data):
-    with open(file, 'w') as f:
-        json.dump(data, f, indent=4)
+    try:
+        with open(file, 'w') as f:
+            json.dump(data, f, indent=4)
+        print(f"[SAVE] {file} salvat.")
+    except Exception as e:
+        print(f"[EROARE] Salvare JSON {file}: {e}")
 
 @app.route("/register", methods=["POST"])
 def register():
@@ -63,7 +78,11 @@ def login():
     if not lic_data or not lic_data.get("activated") or lic_data["expiry_timestamp"] < time.time():
         return jsonify({"error": "Licență invalidă sau expirată"}), 400
 
-    return jsonify({"success": True})
+    return jsonify({
+        "success": True,
+        "license_valid": True,
+        "expiry_timestamp": lic_data["expiry_timestamp"]
+    })
 
 @app.route("/add_license", methods=["POST"])
 def add_license():
@@ -93,7 +112,6 @@ def test_write():
         return "Scriere reușită", 200
     except Exception as e:
         return f"Eroare la scriere: {e}", 500
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
