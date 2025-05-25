@@ -7,8 +7,8 @@ import datetime
 import secrets
 from gevent import pywsgi
 from geventwebsocket.handler import WebSocketHandler
-from gevent.lock import Semaphore
 import gevent
+from gevent.lock import Semaphore
 
 app = Flask(__name__)
 
