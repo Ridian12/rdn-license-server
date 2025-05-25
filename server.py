@@ -91,7 +91,7 @@ def add_license():
     if not license_key:
         return jsonify({"error": "No license provided"}), 400
 
-    existing = License.query.get(license_key)
+    existing = db.session.get(License, license_key)
     if existing:
         return jsonify({"error": "License already exists"}), 400
 
@@ -105,10 +105,10 @@ def register():
     data = request.json
     user, pwd, licenta, hwid = data["user"], data["pwd"], data["licenta"], data["hwid"]
 
-    if User.query.get(user):
+    if db.session.get(User, user):
         return jsonify({"error": "User already exists"}), 400
 
-    lic = License.query.get(licenta)
+    lic = db.session.get(License, licenta)
     if not lic or lic.activated:
         return jsonify({"error": "Licență invalidă sau activată"}), 400
 
@@ -133,7 +133,7 @@ def login():
     data = request.json
     user, pwd, hwid = data["user"], data["pwd"], data["hwid"]
 
-    usr = User.query.get(user)
+    usr = db.session.get(User, user)
     if not usr:
         return jsonify({"error": "User not found"}), 400
 
@@ -143,7 +143,7 @@ def login():
     if usr.hwid != hwid:
         return jsonify({"error": "Wrong HWID"}), 400
 
-    lic = License.query.get(usr.license_key)
+    lic = db.session.get(License, usr.license_key)
     if not lic or not lic.activated or lic.expiry_timestamp < time.time():
         return jsonify({"error": "Licență invalidă sau expirată"}), 400
 
@@ -164,7 +164,7 @@ def get_token():
     if not user:
         return jsonify({"success": False, "error": "HWID not found"}), 400
 
-    lic = License.query.get(user.license_key)
+    lic = db.session.get(License, user.license_key)
     if not lic or not lic.activated or lic.expiry_timestamp < time.time():
         return jsonify({"success": False, "error": "Licență invalidă sau expirată"}), 400
 
