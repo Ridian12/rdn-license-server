@@ -1,11 +1,12 @@
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import func
+from flask_sock import Sock
 import hashlib
 import time
-import os
 import datetime
 import secrets
+from gevent import pywsgi
+from geventwebsocket.handler import WebSocketHandler
 
 app = Flask(__name__)
 
@@ -14,6 +15,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://ridiandb_user:OhBij83nKsJx
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
+sock = Sock(app)
 
 # ---------------------- MODELE ----------------------
 class License(db.Model):
@@ -39,6 +41,25 @@ class SessionToken(db.Model):
 
     def is_valid(self):
         return datetime.datetime.utcnow() < self.expiry
+
+# ---------------------- CONEXIUNI WEBSOCKET ----------------------
+active_connections = {}
+
+@sock.route('/ws/<hwid>')
+def websocket(ws, hwid):
+    active_connections[hwid] = ws
+    print(f"GUI connected: {hwid}")
+    try:
+        while True:
+            data = ws.receive()
+            if data is None:
+                break
+            print(f"Received from {hwid}: {data}")
+    except Exception as e:
+        print(f"WebSocket error for {hwid}: {e}")
+    finally:
+        active_connections.pop(hwid, None)
+        print(f"GUI disconnected: {hwid}")
 
 # ---------------------- ROUTEURI ----------------------
 @app.route("/")
@@ -157,9 +178,29 @@ def validate_token():
 
     return jsonify({"success": True, "username": session_token.username})
 
-# ---------------------- INIT DB ----------------------
+# ---------------------- Endpoint pentru comenzi ----------------------
+@app.route("/command", methods=["POST"])
+def command():
+    data = request.json
+    hwid = data.get("hwid")
+    command = data.get("command")
+    if not hwid or not command:
+        return jsonify({"success": False, "error": "Missing hwid or command"}), 400
+
+    ws = active_connections.get(hwid)
+    if ws:
+        try:
+            ws.send(command)
+            return jsonify({"success": True, "message": f"Command '{command}' sent to {hwid}"})
+        except Exception as e:
+            return jsonify({"success": False, "error": f"Failed to send command: {e}"}), 500
+    else:
+        return jsonify({"success": False, "error": f"Client with HWID {hwid} not connected"}), 404
+
 # ---------------------- MAIN ----------------------
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    app.run(host="0.0.0.0", port=5000)
+    server = pywsgi.WSGIServer(('0.0.0.0', 5000), app, handler_class=WebSocketHandler)
+    print("Server pornit pe portul 5000")
+    server.serve_forever()
