@@ -7,6 +7,8 @@ import datetime
 import secrets
 from gevent import pywsgi
 from geventwebsocket.handler import WebSocketHandler
+from gevent.lock import Semaphore
+import gevent
 
 app = Flask(__name__)
 
@@ -16,6 +18,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 sock = Sock(app)
+
+send_lock = Semaphore()
 
 # ---------------------- MODELE ----------------------
 class License(db.Model):
@@ -49,15 +53,29 @@ active_connections = {}
 def websocket(ws, hwid):
     active_connections[hwid] = ws
     print(f"GUI connected: {hwid}")
+
+    def ping_loop():
+        while True:
+            try:
+                ws.send('ping')
+                gevent.sleep(20)  # ping la fiecare 20 secunde
+            except Exception:
+                break
+
+    ping_greenlet = gevent.spawn(ping_loop)
+
     try:
         while True:
             data = ws.receive()
             if data is None:
                 break
+            if data == 'pong':
+                continue  # răspuns la ping
             print(f"Received from {hwid}: {data}")
     except Exception as e:
         print(f"WebSocket error for {hwid}: {e}")
     finally:
+        ping_greenlet.kill()
         active_connections.pop(hwid, None)
         print(f"GUI disconnected: {hwid}")
 
@@ -190,7 +208,8 @@ def command():
     ws = active_connections.get(hwid)
     if ws:
         try:
-            ws.send(command)
+            with send_lock:
+                ws.send(command)
             return jsonify({"success": True, "message": f"Command '{command}' sent to {hwid}"})
         except Exception as e:
             return jsonify({"success": False, "error": f"Failed to send command: {e}"}), 500
